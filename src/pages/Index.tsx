@@ -3,15 +3,38 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import Icon from "@/components/ui/icon";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
-type Screen = "login" | "onboarding" | "main" | "chat" | "createClaim" | "createReport" | "admin";
+type Screen = "login" | "onboarding" | "main" | "chat" | "createClaim" | "createReport" | "admin" | "createChat" | "chatSettings" | "addUser";
 type Tab = "chats" | "claims" | "reports" | "employees" | "profile";
+
+interface Chat {
+  id: number;
+  name: string;
+  lastMessage: string;
+  time: string;
+  unread: number;
+  isGroup: boolean;
+  folder?: string;
+  notificationsEnabled: boolean;
+  avatar?: string;
+}
+
+interface Employee {
+  id: number;
+  name: string;
+  position: string;
+  phone: string;
+}
 
 const Index = () => {
   const [screen, setScreen] = useState<Screen>("login");
@@ -21,14 +44,37 @@ const Index = () => {
   const [selectedChat, setSelectedChat] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [chatAvatar, setChatAvatar] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedFolder, setSelectedFolder] = useState<string>("Все");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
-  const mockChats = [
-    { id: 1, name: "Производственный отдел", lastMessage: "Согласовано", time: "14:30", unread: 2, isGroup: true },
-    { id: 2, name: "Алексей Иванов", lastMessage: "Когда встретимся?", time: "13:15", unread: 0, isGroup: false },
-    { id: 3, name: "Отдел качества", lastMessage: "Новая рекламация", time: "12:00", unread: 5, isGroup: true },
-    { id: 4, name: "Мария Петрова", lastMessage: "Отчет готов", time: "11:45", unread: 0, isGroup: false },
-  ];
+  const [onboardingData, setOnboardingData] = useState({
+    fullName: "",
+    position: "",
+    phone: ""
+  });
+
+  const [newChatData, setNewChatData] = useState({
+    name: "",
+    selectedEmployees: [] as number[]
+  });
+
+  const [newUserData, setNewUserData] = useState({
+    phone: "",
+    canCreateClaims: false,
+    canCreateReports: false
+  });
+
+  const [chats, setChats] = useState<Chat[]>([
+    { id: 1, name: "Производственный отдел", lastMessage: "Согласовано", time: "14:30", unread: 2, isGroup: true, folder: "Работа", notificationsEnabled: true },
+    { id: 2, name: "Алексей Иванов", lastMessage: "Когда встретимся?", time: "13:15", unread: 0, isGroup: false, notificationsEnabled: true },
+    { id: 3, name: "Отдел качества", lastMessage: "Новая рекламация", time: "12:00", unread: 5, isGroup: true, folder: "Работа", notificationsEnabled: false },
+    { id: 4, name: "Мария Петрова", lastMessage: "Отчет готов", time: "11:45", unread: 0, isGroup: false, notificationsEnabled: true },
+  ]);
+
+  const folders = ["Все", "Работа", "Личное", "Архив"];
 
   const mockMessages = [
     { id: 1, sender: "Петров С.И.", text: "Добрый день! Проверьте новую партию", time: "14:25", isMine: false },
@@ -37,9 +83,9 @@ const Index = () => {
   ];
 
   const mockClaims = [
-    { id: 1, title: "Дефект сварного шва", status: "Новая", date: "15.11.2024", author: "Иванов А.П." },
-    { id: 2, title: "Брак покрытия", status: "В работе", date: "14.11.2024", author: "Петров С.И." },
-    { id: 3, title: "Несоответствие размеров", status: "Закрыта", date: "13.11.2024", author: "Сидоров К.М." },
+    { id: 1, title: "Дефект сварного шва", status: "Новая", date: "15.11.2024", author: "Иванов А.П.", description: "Обнаружен дефект сварного шва на изделии А-123" },
+    { id: 2, title: "Брак покрытия", status: "В работе", date: "14.11.2024", author: "Петров С.И.", description: "Неравномерное покрытие на партии Б-456" },
+    { id: 3, title: "Несоответствие размеров", status: "Закрыта", date: "13.11.2024", author: "Сидоров К.М.", description: "Размеры не соответствуют чертежу" },
   ];
 
   const mockReports = [
@@ -47,12 +93,12 @@ const Index = () => {
     { id: 2, product: "Изделие Б-456", factoryNum: "ЗН-4568", note: "СЗ-002", date: "14.11.2024" },
   ];
 
-  const mockEmployees = [
+  const [employees, setEmployees] = useState<Employee[]>([
     { id: 1, name: "Алексей Иванов", position: "Инженер", phone: "+7 900 123-45-67" },
     { id: 2, name: "Мария Петрова", position: "Технолог", phone: "+7 900 234-56-78" },
     { id: 3, name: "Сергей Сидоров", position: "Контролер ОТК", phone: "+7 900 345-67-89" },
     { id: 4, name: "Елена Смирнова", position: "Мастер", phone: "+7 900 456-78-90" },
-  ];
+  ]);
 
   const mockUsers = [
     { id: 1, login: "ivanov_a", phone: "+7 900 123-45-67", canCreateClaims: true, canCreateReports: true, active: true },
@@ -71,7 +117,12 @@ const Index = () => {
   };
 
   const handleOnboarding = () => {
-    setScreen("main");
+    if (onboardingData.fullName && onboardingData.position && onboardingData.phone) {
+      toast.success("Профиль успешно создан!");
+      setScreen("main");
+    } else {
+      toast.error("Заполните все поля");
+    }
   };
 
   const openChat = (chatId: number) => {
@@ -87,9 +138,111 @@ const Index = () => {
     }
   };
 
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setChatAvatar(URL.createObjectURL(file));
+    }
+  };
+
   const removeImage = (index: number) => {
     setUploadedImages(uploadedImages.filter((_, i) => i !== index));
   };
+
+  const toggleNotifications = (chatId: number) => {
+    setChats(chats.map(chat => 
+      chat.id === chatId 
+        ? { ...chat, notificationsEnabled: !chat.notificationsEnabled }
+        : chat
+    ));
+    toast.success("Настройки уведомлений обновлены");
+  };
+
+  const createChat = () => {
+    if (newChatData.name && newChatData.selectedEmployees.length > 0) {
+      const newChat: Chat = {
+        id: chats.length + 1,
+        name: newChatData.name,
+        lastMessage: "Чат создан",
+        time: "Сейчас",
+        unread: 0,
+        isGroup: newChatData.selectedEmployees.length > 1,
+        notificationsEnabled: true,
+        avatar: chatAvatar
+      };
+      setChats([...chats, newChat]);
+      toast.success("Чат успешно создан!");
+      setScreen("main");
+      setNewChatData({ name: "", selectedEmployees: [] });
+      setChatAvatar("");
+    } else {
+      toast.error("Заполните название и выберите участников");
+    }
+  };
+
+  const toggleEmployeeSelection = (employeeId: number) => {
+    if (newChatData.selectedEmployees.includes(employeeId)) {
+      setNewChatData({
+        ...newChatData,
+        selectedEmployees: newChatData.selectedEmployees.filter(id => id !== employeeId)
+      });
+    } else {
+      setNewChatData({
+        ...newChatData,
+        selectedEmployees: [...newChatData.selectedEmployees, employeeId]
+      });
+    }
+  };
+
+  const sendMessage = () => {
+    if (message.trim()) {
+      toast.success("Сообщение отправлено");
+      setMessage("");
+    }
+  };
+
+  const createClaim = () => {
+    if (uploadedImages.length > 0) {
+      toast.success("Рекламация создана");
+      setScreen("main");
+      setUploadedImages([]);
+    } else {
+      toast.error("Добавьте хотя бы одно фото");
+    }
+  };
+
+  const createReport = () => {
+    if (uploadedImages.length > 0) {
+      toast.success("Отчет создан");
+      setScreen("main");
+      setUploadedImages([]);
+    } else {
+      toast.error("Добавьте хотя бы одно фото");
+    }
+  };
+
+  const addUser = () => {
+    if (newUserData.phone) {
+      const generatedLogin = `user_${Math.random().toString(36).substr(2, 8)}`;
+      const generatedPassword = Math.random().toString(36).substr(2, 8);
+      toast.success(`Пользователь создан!\nЛогин: ${generatedLogin}\nПароль: ${generatedPassword}\nСМС отправлено на ${newUserData.phone}`);
+      setScreen("admin");
+      setNewUserData({ phone: "", canCreateClaims: false, canCreateReports: false });
+    } else {
+      toast.error("Введите номер телефона");
+    }
+  };
+
+  const filteredChats = chats.filter(chat => {
+    const matchesFolder = selectedFolder === "Все" || chat.folder === selectedFolder || (!chat.folder && selectedFolder === "Все");
+    const matchesSearch = chat.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesFolder && matchesSearch;
+  });
+
+  const filteredEmployees = employees.filter(emp =>
+    emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    emp.position.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   if (screen === "login") {
     return (
@@ -106,17 +259,19 @@ const Index = () => {
             
             <div className="space-y-4">
               <div>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Логин</Label>
                 <Input
-                  placeholder="Логин"
+                  placeholder="Введите логин"
                   value={login}
                   onChange={(e) => setLogin(e.target.value)}
                   className="h-12"
                 />
               </div>
               <div>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Пароль</Label>
                 <Input
                   type="password"
-                  placeholder="Пароль"
+                  placeholder="Введите пароль"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="h-12"
@@ -147,16 +302,31 @@ const Index = () => {
             
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Фамилия Имя</label>
-                <Input placeholder="Иванов Алексей" className="h-12" />
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Фамилия Имя</Label>
+                <Input 
+                  placeholder="Иванов Алексей" 
+                  className="h-12" 
+                  value={onboardingData.fullName}
+                  onChange={(e) => setOnboardingData({...onboardingData, fullName: e.target.value})}
+                />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Должность</label>
-                <Input placeholder="Инженер" className="h-12" />
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Должность</Label>
+                <Input 
+                  placeholder="Инженер" 
+                  className="h-12" 
+                  value={onboardingData.position}
+                  onChange={(e) => setOnboardingData({...onboardingData, position: e.target.value})}
+                />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Телефон</label>
-                <Input placeholder="+7 900 123-45-67" className="h-12" />
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Телефон</Label>
+                <Input 
+                  placeholder="+7 900 123-45-67" 
+                  className="h-12" 
+                  value={onboardingData.phone}
+                  onChange={(e) => setOnboardingData({...onboardingData, phone: e.target.value})}
+                />
               </div>
               <Button onClick={handleOnboarding} className="w-full h-12 text-base font-medium mt-6">
                 Продолжить
@@ -168,8 +338,149 @@ const Index = () => {
     );
   }
 
+  if (screen === "createChat") {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+          <div className="max-w-2xl mx-auto px-4 py-4">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={() => { setScreen("main"); setNewChatData({ name: "", selectedEmployees: [] }); setChatAvatar(""); }}>
+                <Icon name="X" size={20} />
+              </Button>
+              <h1 className="text-xl font-semibold text-gray-900">Новый чат</h1>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+          <Card>
+            <CardContent className="p-4 space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <input
+                    type="file"
+                    ref={avatarInputRef}
+                    onChange={handleAvatarUpload}
+                    accept="image/*"
+                    className="hidden"
+                  />
+                  <Avatar className="w-20 h-20 cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
+                    {chatAvatar ? (
+                      <AvatarImage src={chatAvatar} />
+                    ) : (
+                      <AvatarFallback className="bg-gray-200">
+                        <Icon name="Camera" size={24} className="text-gray-500" />
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
+                </div>
+                <div className="flex-1">
+                  <Label className="text-sm font-medium text-gray-700 mb-2 block">Название чата</Label>
+                  <Input
+                    placeholder="Введите название"
+                    className="h-12"
+                    value={newChatData.name}
+                    onChange={(e) => setNewChatData({...newChatData, name: e.target.value})}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <Label className="text-sm font-medium text-gray-700 mb-3 block">Участники чата</Label>
+              <Input
+                placeholder="Поиск сотрудников..."
+                className="mb-3"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <ScrollArea className="h-64">
+                <div className="space-y-2">
+                  {filteredEmployees.map((employee) => (
+                    <div key={employee.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer" onClick={() => toggleEmployeeSelection(employee.id)}>
+                      <Checkbox checked={newChatData.selectedEmployees.includes(employee.id)} />
+                      <Avatar className="w-10 h-10">
+                        <AvatarFallback className="bg-primary text-white text-sm">
+                          {employee.name.split(" ").map(n => n[0]).join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <p className="font-medium text-sm text-gray-900">{employee.name}</p>
+                        <p className="text-xs text-gray-500">{employee.position}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+              <p className="text-xs text-gray-500 mt-3">Выбрано: {newChatData.selectedEmployees.length}</p>
+            </CardContent>
+          </Card>
+
+          <Button className="w-full h-12" onClick={createChat}>
+            Создать чат
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (screen === "chatSettings") {
+    const currentChat = chats.find(chat => chat.id === selectedChat);
+    
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+          <div className="max-w-2xl mx-auto px-4 py-4">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={() => setScreen("chat")}>
+                <Icon name="ArrowLeft" size={20} />
+              </Button>
+              <h1 className="text-xl font-semibold text-gray-900">Настройки чата</h1>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Icon name="Bell" size={20} className="text-gray-600" />
+                  <div>
+                    <p className="font-medium text-gray-900">Уведомления</p>
+                    <p className="text-xs text-gray-500">Получать пуш-уведомления</p>
+                  </div>
+                </div>
+                <Switch 
+                  checked={currentChat?.notificationsEnabled} 
+                  onCheckedChange={() => selectedChat && toggleNotifications(selectedChat)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <Label className="text-sm font-medium text-gray-700 mb-2 block">Папка</Label>
+              <div className="space-y-2">
+                {folders.filter(f => f !== "Все").map((folder) => (
+                  <Button key={folder} variant="outline" className="w-full justify-start">
+                    <Icon name="Folder" size={16} className="mr-2" />
+                    {folder}
+                  </Button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   if (screen === "chat") {
-    const currentChat = mockChats.find(chat => chat.id === selectedChat);
+    const currentChat = chats.find(chat => chat.id === selectedChat);
     
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -180,16 +491,20 @@ const Index = () => {
                 <Icon name="ArrowLeft" size={20} />
               </Button>
               <Avatar className="w-10 h-10">
-                <AvatarFallback className="bg-primary text-white">
-                  {currentChat?.isGroup ? <Icon name="Users" size={20} /> : currentChat?.name[0]}
-                </AvatarFallback>
+                {currentChat?.avatar ? (
+                  <AvatarImage src={currentChat.avatar} />
+                ) : (
+                  <AvatarFallback className="bg-primary text-white">
+                    {currentChat?.isGroup ? <Icon name="Users" size={20} /> : currentChat?.name[0]}
+                  </AvatarFallback>
+                )}
               </Avatar>
               <div className="flex-1">
                 <h1 className="text-base font-semibold text-gray-900">{currentChat?.name}</h1>
                 <p className="text-xs text-gray-500">{currentChat?.isGroup ? "Групповой чат" : "В сети"}</p>
               </div>
-              <Button variant="ghost" size="icon">
-                <Icon name="MoreVertical" size={20} />
+              <Button variant="ghost" size="icon" onClick={() => setScreen("chatSettings")}>
+                <Icon name="Settings" size={20} />
               </Button>
             </div>
           </div>
@@ -218,9 +533,10 @@ const Index = () => {
               placeholder="Сообщение..."
               value={message}
               onChange={(e) => setMessage(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
               className="flex-1"
             />
-            <Button size="icon" onClick={() => setMessage("")}>
+            <Button size="icon" onClick={sendMessage}>
               <Icon name="Send" size={20} />
             </Button>
           </div>
@@ -247,16 +563,21 @@ const Index = () => {
           <Card>
             <CardContent className="p-4 space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Описание дефекта</label>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Название</Label>
+                <Input placeholder="Краткое описание брака" className="h-12" />
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Подробное описание дефекта</Label>
                 <Textarea 
-                  placeholder="Опишите обнаруженный брак подробно..."
-                  rows={5}
+                  placeholder="Опишите обнаруженный брак максимально подробно: что именно не соответствует требованиям, на каком этапе обнаружено, предполагаемые причины..."
+                  rows={6}
                   className="resize-none"
                 />
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Фотографии</label>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Фотографии дефекта *</Label>
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -273,6 +594,7 @@ const Index = () => {
                   <div className="flex flex-col items-center gap-2">
                     <Icon name="Camera" size={24} />
                     <span className="text-sm">Добавить фото</span>
+                    <span className="text-xs text-gray-500">Можно добавить несколько</span>
                   </div>
                 </Button>
 
@@ -297,7 +619,8 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          <Button className="w-full h-12" onClick={() => { setScreen("main"); setUploadedImages([]); }}>
+          <Button className="w-full h-12" onClick={createClaim}>
+            <Icon name="Send" size={20} className="mr-2" />
             Отправить рекламацию
           </Button>
         </div>
@@ -314,7 +637,7 @@ const Index = () => {
               <Button variant="ghost" size="icon" onClick={() => { setScreen("main"); setUploadedImages([]); }}>
                 <Icon name="X" size={20} />
               </Button>
-              <h1 className="text-xl font-semibold text-gray-900">Новый отчет</h1>
+              <h1 className="text-xl font-semibold text-gray-900">Новый отчет на отгрузку</h1>
             </div>
           </div>
         </div>
@@ -323,22 +646,24 @@ const Index = () => {
           <Card>
             <CardContent className="p-4 space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Название изделия</label>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Название изделия *</Label>
                 <Input placeholder="Изделие А-123" className="h-12" />
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Заводской номер</label>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Заводской номер *</Label>
                 <Input placeholder="ЗН-4567" className="h-12" />
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Номер служебной записки</label>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Номер служебной записки *</Label>
                 <Input placeholder="СЗ-001" className="h-12" />
               </div>
 
+              <Separator />
+
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Фотографии</label>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Фотографии *</Label>
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -354,7 +679,8 @@ const Index = () => {
                 >
                   <div className="flex flex-col items-center gap-2">
                     <Icon name="Camera" size={24} />
-                    <span className="text-sm">Добавить фото</span>
+                    <span className="text-sm">Добавить фото изделия</span>
+                    <span className="text-xs text-gray-500">Можно добавить несколько</span>
                   </div>
                 </Button>
 
@@ -379,8 +705,76 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          <Button className="w-full h-12" onClick={() => { setScreen("main"); setUploadedImages([]); }}>
+          <Button className="w-full h-12" onClick={createReport}>
+            <Icon name="CheckCircle" size={20} className="mr-2" />
             Создать отчет
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (screen === "addUser") {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+          <div className="max-w-2xl mx-auto px-4 py-4">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={() => { setScreen("admin"); setNewUserData({ phone: "", canCreateClaims: false, canCreateReports: false }); }}>
+                <Icon name="X" size={20} />
+              </Button>
+              <h1 className="text-xl font-semibold text-gray-900">Новый пользователь</h1>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+          <Card>
+            <CardContent className="p-4 space-y-4">
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Номер телефона *</Label>
+                <Input 
+                  placeholder="+7 900 123-45-67" 
+                  className="h-12"
+                  value={newUserData.phone}
+                  onChange={(e) => setNewUserData({...newUserData, phone: e.target.value})}
+                />
+                <p className="text-xs text-gray-500 mt-2">На этот номер будет отправлена СМС с логином и паролем</p>
+              </div>
+
+              <Separator />
+
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-3 block">Права доступа</Label>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-sm text-gray-900">Создание рекламаций</p>
+                      <p className="text-xs text-gray-500">Возможность создавать заявки о браке</p>
+                    </div>
+                    <Switch 
+                      checked={newUserData.canCreateClaims}
+                      onCheckedChange={(checked) => setNewUserData({...newUserData, canCreateClaims: checked})}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-sm text-gray-900">Создание отчетов</p>
+                      <p className="text-xs text-gray-500">Возможность создавать отчеты на отгрузку</p>
+                    </div>
+                    <Switch 
+                      checked={newUserData.canCreateReports}
+                      onCheckedChange={(checked) => setNewUserData({...newUserData, canCreateReports: checked})}
+                    />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Button className="w-full h-12" onClick={addUser}>
+            <Icon name="UserPlus" size={20} className="mr-2" />
+            Создать пользователя
           </Button>
         </div>
       </div>
@@ -402,7 +796,7 @@ const Index = () => {
         </div>
 
         <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
-          <Button className="w-full h-12">
+          <Button className="w-full h-12" onClick={() => setScreen("addUser")}>
             <Icon name="UserPlus" size={20} className="mr-2" />
             Добавить пользователя
           </Button>
@@ -423,7 +817,7 @@ const Index = () => {
                   
                   <Separator className="my-3" />
                   
-                  <div className="space-y-2">
+                  <div className="space-y-2 mb-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Создание рекламаций</span>
                       <Switch checked={user.canCreateClaims} />
@@ -434,10 +828,16 @@ const Index = () => {
                     </div>
                   </div>
 
-                  <Button variant="destructive" size="sm" className="w-full mt-3">
-                    <Icon name="Trash2" size={16} className="mr-2" />
-                    Удалить пользователя
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="flex-1">
+                      <Icon name="UserX" size={16} className="mr-2" />
+                      {user.active ? "Деактивировать" : "Активировать"}
+                    </Button>
+                    <Button variant="destructive" size="sm" className="flex-1">
+                      <Icon name="Trash2" size={16} className="mr-2" />
+                      Удалить
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -459,39 +859,77 @@ const Index = () => {
               {activeTab === "employees" && "Сотрудники"}
               {activeTab === "profile" && "Профиль"}
             </h1>
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <Icon name="Search" size={20} />
-            </Button>
+            <div className="flex gap-2">
+              {activeTab === "chats" && (
+                <Button variant="ghost" size="icon" onClick={() => setScreen("createChat")}>
+                  <Icon name="Plus" size={20} />
+                </Button>
+              )}
+              <Button variant="ghost" size="icon" onClick={() => setSearchQuery("")}>
+                <Icon name="Search" size={20} />
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-4">
         {activeTab === "chats" && (
-          <div className="space-y-2">
-            {mockChats.map((chat) => (
-              <Card key={chat.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => openChat(chat.id)}>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="w-12 h-12">
-                      <AvatarFallback className="bg-primary text-white">
-                        {chat.isGroup ? <Icon name="Users" size={20} /> : chat.name[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <h3 className="font-medium text-gray-900 truncate">{chat.name}</h3>
-                        <span className="text-xs text-gray-500">{chat.time}</span>
+          <div className="space-y-4">
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {folders.map((folder) => (
+                <Button
+                  key={folder}
+                  variant={selectedFolder === folder ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedFolder(folder)}
+                  className="whitespace-nowrap"
+                >
+                  {folder}
+                </Button>
+              ))}
+            </div>
+
+            <Input
+              placeholder="Поиск чатов..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+
+            <div className="space-y-2">
+              {filteredChats.map((chat) => (
+                <Card key={chat.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => openChat(chat.id)}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="w-12 h-12">
+                        {chat.avatar ? (
+                          <AvatarImage src={chat.avatar} />
+                        ) : (
+                          <AvatarFallback className="bg-primary text-white">
+                            {chat.isGroup ? <Icon name="Users" size={20} /> : chat.name[0]}
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium text-gray-900 truncate">{chat.name}</h3>
+                            {!chat.notificationsEnabled && (
+                              <Icon name="BellOff" size={14} className="text-gray-400" />
+                            )}
+                          </div>
+                          <span className="text-xs text-gray-500">{chat.time}</span>
+                        </div>
+                        <p className="text-sm text-gray-500 truncate">{chat.lastMessage}</p>
                       </div>
-                      <p className="text-sm text-gray-500 truncate">{chat.lastMessage}</p>
+                      {chat.unread > 0 && (
+                        <Badge className="bg-primary">{chat.unread}</Badge>
+                      )}
                     </div>
-                    {chat.unread > 0 && (
-                      <Badge className="bg-primary">{chat.unread}</Badge>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
         )}
 
@@ -510,6 +948,7 @@ const Index = () => {
                       {claim.status}
                     </Badge>
                   </div>
+                  <p className="text-sm text-gray-600 mb-3">{claim.description}</p>
                   <div className="flex items-center gap-4 text-sm text-gray-500">
                     <span className="flex items-center gap-1">
                       <Icon name="Calendar" size={14} />
@@ -557,28 +996,48 @@ const Index = () => {
         )}
 
         {activeTab === "employees" && (
-          <div className="space-y-2">
-            {mockEmployees.map((employee) => (
-              <Card key={employee.id} className="hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="w-12 h-12">
-                      <AvatarFallback className="bg-primary text-white">
-                        {employee.name.split(" ").map(n => n[0]).join("")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-gray-900">{employee.name}</h3>
-                      <p className="text-sm text-gray-500">{employee.position}</p>
-                      <p className="text-xs text-gray-400 mt-1">{employee.phone}</p>
+          <div className="space-y-4">
+            <Input
+              placeholder="Поиск сотрудников..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <div className="space-y-2">
+              {filteredEmployees.map((employee) => (
+                <Card key={employee.id} className="hover:shadow-md transition-shadow cursor-pointer">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="w-12 h-12">
+                        <AvatarFallback className="bg-primary text-white">
+                          {employee.name.split(" ").map(n => n[0]).join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-gray-900">{employee.name}</h3>
+                        <p className="text-sm text-gray-500">{employee.position}</p>
+                        <p className="text-xs text-gray-400 mt-1">{employee.phone}</p>
+                      </div>
+                      <Button variant="ghost" size="icon" className="rounded-full" onClick={() => {
+                        const newChat: Chat = {
+                          id: chats.length + 1,
+                          name: employee.name,
+                          lastMessage: "Начните общение",
+                          time: "Сейчас",
+                          unread: 0,
+                          isGroup: false,
+                          notificationsEnabled: true
+                        };
+                        setChats([...chats, newChat]);
+                        setSelectedChat(newChat.id);
+                        setScreen("chat");
+                      }}>
+                        <Icon name="MessageCircle" size={20} />
+                      </Button>
                     </div>
-                    <Button variant="ghost" size="icon" className="rounded-full">
-                      <Icon name="MessageCircle" size={20} />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
         )}
 
@@ -588,16 +1047,18 @@ const Index = () => {
               <CardContent className="p-6">
                 <div className="flex flex-col items-center mb-6">
                   <Avatar className="w-24 h-24 mb-4">
-                    <AvatarFallback className="bg-primary text-white text-2xl">АИ</AvatarFallback>
+                    <AvatarFallback className="bg-primary text-white text-2xl">
+                      {onboardingData.fullName.split(" ").map(n => n[0]).join("") || "АИ"}
+                    </AvatarFallback>
                   </Avatar>
-                  <h2 className="text-xl font-semibold text-gray-900">Алексей Иванов</h2>
-                  <p className="text-sm text-gray-500">Инженер</p>
+                  <h2 className="text-xl font-semibold text-gray-900">{onboardingData.fullName || "Алексей Иванов"}</h2>
+                  <p className="text-sm text-gray-500">{onboardingData.position || "Инженер"}</p>
                 </div>
                 <Separator className="my-4" />
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-gray-500">Телефон:</span>
-                    <span className="font-medium">+7 900 123-45-67</span>
+                    <span className="font-medium">{onboardingData.phone || "+7 900 123-45-67"}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Логин:</span>
@@ -636,7 +1097,7 @@ const Index = () => {
         <div className="max-w-2xl mx-auto px-4">
           <div className="flex items-center justify-around py-2">
             <button
-              onClick={() => setActiveTab("chats")}
+              onClick={() => {setActiveTab("chats"); setSearchQuery("");}}
               className={`flex flex-col items-center gap-1 py-2 px-4 rounded-xl transition-colors ${
                 activeTab === "chats" ? "text-primary bg-primary/10" : "text-gray-500"
               }`}
@@ -646,7 +1107,7 @@ const Index = () => {
             </button>
             
             <button
-              onClick={() => setActiveTab("claims")}
+              onClick={() => {setActiveTab("claims"); setSearchQuery("");}}
               className={`flex flex-col items-center gap-1 py-2 px-4 rounded-xl transition-colors ${
                 activeTab === "claims" ? "text-primary bg-primary/10" : "text-gray-500"
               }`}
@@ -656,7 +1117,7 @@ const Index = () => {
             </button>
 
             <button
-              onClick={() => setActiveTab("reports")}
+              onClick={() => {setActiveTab("reports"); setSearchQuery("");}}
               className={`flex flex-col items-center gap-1 py-2 px-4 rounded-xl transition-colors ${
                 activeTab === "reports" ? "text-primary bg-primary/10" : "text-gray-500"
               }`}
@@ -666,7 +1127,7 @@ const Index = () => {
             </button>
 
             <button
-              onClick={() => setActiveTab("employees")}
+              onClick={() => {setActiveTab("employees"); setSearchQuery("");}}
               className={`flex flex-col items-center gap-1 py-2 px-4 rounded-xl transition-colors ${
                 activeTab === "employees" ? "text-primary bg-primary/10" : "text-gray-500"
               }`}
@@ -676,7 +1137,7 @@ const Index = () => {
             </button>
 
             <button
-              onClick={() => setActiveTab("profile")}
+              onClick={() => {setActiveTab("profile"); setSearchQuery("");}}
               className={`flex flex-col items-center gap-1 py-2 px-4 rounded-xl transition-colors ${
                 activeTab === "profile" ? "text-primary bg-primary/10" : "text-gray-500"
               }`}
