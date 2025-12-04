@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
-type Screen = "login" | "onboarding" | "main" | "chat" | "createClaim" | "createReport" | "admin" | "createChat" | "chatSettings" | "addUser" | "claimDetail";
+type Screen = "login" | "onboarding" | "main" | "chat" | "createClaim" | "createReport" | "admin" | "createChat" | "chatSettings" | "addUser" | "claimDetail" | "userProfile";
 type Tab = "chats" | "claims" | "reports" | "employees" | "profile";
 
 interface Chat {
@@ -43,6 +43,7 @@ const Index = () => {
   const [password, setPassword] = useState("");
   const [selectedChat, setSelectedChat] = useState<number | null>(null);
   const [selectedClaim, setSelectedClaim] = useState<number | null>(null);
+  const [selectedUser, setSelectedUser] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [chatAvatar, setChatAvatar] = useState<string>("");
@@ -923,6 +924,146 @@ const Index = () => {
     );
   }
 
+  if (screen === "userProfile") {
+    const user = mockUsers.find(u => u.id === selectedUser);
+    if (!user) return null;
+
+    const userActivity = [
+      { id: 1, type: "claim", title: "Создал рекламацию", description: "Дефект сварного шва", date: "15.11.2024 14:30" },
+      { id: 2, type: "report", title: "Создал отчет", description: "Изделие А-123", date: "14.11.2024 11:20" },
+      { id: 3, type: "message", title: "Отправил сообщение", description: "В чат 'Производственный отдел'", date: "13.11.2024 16:45" },
+    ];
+
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+          <div className="max-w-2xl mx-auto px-4 py-4">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={() => setScreen("admin")}>
+                <Icon name="ArrowLeft" size={20} />
+              </Button>
+              <h1 className="text-xl font-semibold text-gray-900">Профиль пользователя</h1>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <Avatar className="w-16 h-16">
+                    <AvatarFallback className="bg-primary text-white text-xl">
+                      {user.login.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">{user.login}</h2>
+                    <p className="text-sm text-gray-500">{user.phone}</p>
+                  </div>
+                </div>
+                <Badge variant={user.active ? "default" : "secondary"} className="text-sm">
+                  {user.active ? "Активен" : "Деактивирован"}
+                </Badge>
+              </div>
+
+              <Separator className="my-4" />
+
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-3 block">Права доступа</Label>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-sm text-gray-900">Создание рекламаций</p>
+                      <p className="text-xs text-gray-500">Возможность создавать заявки о браке</p>
+                    </div>
+                    <Switch checked={user.canCreateClaims} />
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-sm text-gray-900">Создание отчетов</p>
+                      <p className="text-xs text-gray-500">Возможность создавать отчеты на отгрузку</p>
+                    </div>
+                    <Switch checked={user.canCreateReports} />
+                  </div>
+                </div>
+              </div>
+
+              <Separator className="my-4" />
+
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Дата регистрации</span>
+                  <span className="font-medium text-gray-900">10.11.2024</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Последний вход</span>
+                  <span className="font-medium text-gray-900">15.11.2024 14:30</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Создано рекламаций</span>
+                  <span className="font-medium text-gray-900">12</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Создано отчетов</span>
+                  <span className="font-medium text-gray-900">8</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <Label className="text-sm font-medium text-gray-700 mb-3 block">История активности</Label>
+              <div className="space-y-3">
+                {userActivity.map((activity) => (
+                  <div key={activity.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Icon 
+                        name={activity.type === "claim" ? "AlertCircle" : activity.type === "report" ? "FileText" : "MessageCircle"} 
+                        size={18} 
+                        className="text-primary" 
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900">{activity.title}</p>
+                      <p className="text-xs text-gray-600">{activity.description}</p>
+                      <p className="text-xs text-gray-400 mt-1">{activity.date}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <Label className="text-sm font-medium text-gray-700 mb-3 block">Действия</Label>
+              <div className="space-y-2">
+                <Button variant="outline" className="w-full justify-start">
+                  <Icon name="Edit" size={18} className="mr-2" />
+                  Редактировать права доступа
+                </Button>
+                <Button variant="outline" className="w-full justify-start">
+                  <Icon name="KeyRound" size={18} className="mr-2" />
+                  Сбросить пароль
+                </Button>
+                <Button variant="outline" className="w-full justify-start">
+                  <Icon name="UserX" size={18} className="mr-2" />
+                  {user.active ? "Деактивировать учетную запись" : "Активировать учетную запись"}
+                </Button>
+                <Button variant="destructive" className="w-full justify-start">
+                  <Icon name="Trash2" size={18} className="mr-2" />
+                  Удалить пользователя
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   if (screen === "addUser") {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -1012,7 +1153,7 @@ const Index = () => {
 
           <div className="space-y-3">
             {mockUsers.map((user) => (
-              <Card key={user.id}>
+              <Card key={user.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => { setSelectedUser(user.id); setScreen("userProfile"); }}>
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between mb-3">
                     <div>
@@ -1026,26 +1167,15 @@ const Index = () => {
                   
                   <Separator className="my-3" />
                   
-                  <div className="space-y-2 mb-3">
+                  <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Создание рекламаций</span>
-                      <Switch checked={user.canCreateClaims} />
+                      <Icon name={user.canCreateClaims ? "Check" : "X"} size={16} className={user.canCreateClaims ? "text-green-600" : "text-gray-400"} />
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Создание отчетов</span>
-                      <Switch checked={user.canCreateReports} />
+                      <Icon name={user.canCreateReports ? "Check" : "X"} size={16} className={user.canCreateReports ? "text-green-600" : "text-gray-400"} />
                     </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1">
-                      <Icon name="UserX" size={16} className="mr-2" />
-                      {user.active ? "Деактивировать" : "Активировать"}
-                    </Button>
-                    <Button variant="destructive" size="sm" className="flex-1">
-                      <Icon name="Trash2" size={16} className="mr-2" />
-                      Удалить
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
