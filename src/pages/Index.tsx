@@ -1040,12 +1040,55 @@ const Index = () => {
 
           <Card>
             <CardContent className="p-4">
-              <Label className="text-sm font-medium text-gray-700 mb-3 block">Действия</Label>
+              <Label className="text-sm font-medium text-gray-700 mb-3 block">Управление пользователем</Label>
               <div className="space-y-2">
-                <Button variant="outline" className="w-full justify-start">
-                  <Icon name="Edit" size={18} className="mr-2" />
-                  Редактировать права доступа
-                </Button>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start">
+                      <Icon name="Edit" size={18} className="mr-2" />
+                      Редактировать права доступа
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <Icon name="Edit" size={20} className="text-primary" />
+                        Редактирование прав
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                      <p className="text-sm text-gray-600 mb-4">
+                        Настройка прав доступа для пользователя <span className="font-medium text-gray-900">{user.login}</span>
+                      </p>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div>
+                            <p className="font-medium text-sm text-gray-900">Создание рекламаций</p>
+                            <p className="text-xs text-gray-500">Возможность создавать заявки о браке</p>
+                          </div>
+                          <Switch defaultChecked={user.canCreateClaims} />
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div>
+                            <p className="font-medium text-sm text-gray-900">Создание отчетов</p>
+                            <p className="text-xs text-gray-500">Возможность создавать отчеты на отгрузку</p>
+                          </div>
+                          <Switch defaultChecked={user.canCreateReports} />
+                        </div>
+                      </div>
+                      <div className="flex gap-2 pt-2">
+                        <DialogTrigger asChild>
+                          <Button variant="outline" className="flex-1">Отмена</Button>
+                        </DialogTrigger>
+                        <Button className="flex-1" onClick={() => {
+                          toast.success("Права доступа обновлены");
+                        }}>
+                          Сохранить
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button variant="outline" className="w-full justify-start">
