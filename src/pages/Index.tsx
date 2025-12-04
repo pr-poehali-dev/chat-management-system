@@ -158,6 +158,16 @@ const Index = () => {
     toast.success("Настройки уведомлений обновлены");
   };
 
+  const moveChatToFolder = (chatId: number, folder: string) => {
+    setChats(chats.map(chat => 
+      chat.id === chatId 
+        ? { ...chat, folder: folder }
+        : chat
+    ));
+    toast.success(`Чат перемещен в папку "${folder}"`);
+    setScreen("chat");
+  };
+
   const createChat = () => {
     if (newChatData.name && newChatData.selectedEmployees.length > 0) {
       const newChat: Chat = {
@@ -463,12 +473,23 @@ const Index = () => {
 
           <Card>
             <CardContent className="p-4">
-              <Label className="text-sm font-medium text-gray-700 mb-2 block">Папка</Label>
+              <Label className="text-sm font-medium text-gray-700 mb-3 block">Папка</Label>
+              <p className="text-xs text-gray-500 mb-3">
+                Текущая папка: <span className="font-medium">{currentChat?.folder || "Без папки"}</span>
+              </p>
               <div className="space-y-2">
                 {folders.filter(f => f !== "Все").map((folder) => (
-                  <Button key={folder} variant="outline" className="w-full justify-start">
+                  <Button 
+                    key={folder} 
+                    variant={currentChat?.folder === folder ? "default" : "outline"} 
+                    className="w-full justify-start"
+                    onClick={() => selectedChat && moveChatToFolder(selectedChat, folder)}
+                  >
                     <Icon name="Folder" size={16} className="mr-2" />
                     {folder}
+                    {currentChat?.folder === folder && (
+                      <Icon name="Check" size={16} className="ml-auto" />
+                    )}
                   </Button>
                 ))}
               </div>
