@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
-type Screen = "login" | "onboarding" | "main" | "chat" | "createClaim" | "createReport" | "admin" | "createChat" | "chatSettings" | "addUser";
+type Screen = "login" | "onboarding" | "main" | "chat" | "createClaim" | "createReport" | "admin" | "createChat" | "chatSettings" | "addUser" | "claimDetail";
 type Tab = "chats" | "claims" | "reports" | "employees" | "profile";
 
 interface Chat {
@@ -42,6 +42,7 @@ const Index = () => {
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [selectedChat, setSelectedChat] = useState<number | null>(null);
+  const [selectedClaim, setSelectedClaim] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [chatAvatar, setChatAvatar] = useState<string>("");
@@ -810,6 +811,118 @@ const Index = () => {
     );
   }
 
+  if (screen === "claimDetail") {
+    const claim = mockClaims.find(c => c.id === selectedClaim);
+    if (!claim) return null;
+
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+          <div className="max-w-2xl mx-auto px-4 py-4">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={() => setScreen("main")}>
+                <Icon name="ArrowLeft" size={20} />
+              </Button>
+              <h1 className="text-xl font-semibold text-gray-900">Рекламация #{claim.id}</h1>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+          <Card>
+            <CardContent className="p-4 space-y-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">{claim.title}</h2>
+                  <Badge variant={claim.status === "Новая" ? "default" : claim.status === "В работе" ? "secondary" : "outline"}>
+                    {claim.status}
+                  </Badge>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Описание</Label>
+                <p className="text-gray-900">{claim.description}</p>
+              </div>
+
+              <Separator />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-500 mb-1 block">Дата создания</Label>
+                  <div className="flex items-center gap-2">
+                    <Icon name="Calendar" size={16} className="text-gray-400" />
+                    <span className="text-gray-900">{claim.date}</span>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500 mb-1 block">Автор</Label>
+                  <div className="flex items-center gap-2">
+                    <Icon name="User" size={16} className="text-gray-400" />
+                    <span className="text-gray-900">{claim.author}</span>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-3 block">Фотографии</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
+                    <Icon name="Image" size={32} className="text-gray-400" />
+                  </div>
+                  <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
+                    <Icon name="Image" size={32} className="text-gray-400" />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <Label className="text-sm font-medium text-gray-700 mb-3 block">Комментарии</Label>
+              <div className="space-y-3 mb-4">
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Avatar className="w-6 h-6">
+                      <AvatarFallback className="bg-primary text-white text-xs">ИА</AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm font-medium">Иванов А.П.</span>
+                    <span className="text-xs text-gray-500">2 часа назад</span>
+                  </div>
+                  <p className="text-sm text-gray-700">Дефект подтвержден. Передано в производство для исправления.</p>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Textarea placeholder="Добавить комментарий..." rows={3} />
+                <Button className="w-full">
+                  <Icon name="Send" size={16} className="mr-2" />
+                  Отправить
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1">
+              <Icon name="Edit" size={16} className="mr-2" />
+              Изменить статус
+            </Button>
+            <Button variant="destructive" className="flex-1">
+              <Icon name="Trash2" size={16} className="mr-2" />
+              Удалить
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (screen === "addUser") {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -1036,7 +1149,7 @@ const Index = () => {
               Создать рекламацию
             </Button>
             {mockClaims.map((claim) => (
-              <Card key={claim.id} className="hover:shadow-md transition-shadow cursor-pointer">
+              <Card key={claim.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => { setSelectedClaim(claim.id); setScreen("claimDetail"); }}>
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between mb-2">
                     <h3 className="font-medium text-gray-900">{claim.title}</h3>
