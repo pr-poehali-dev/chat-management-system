@@ -1044,18 +1044,134 @@ const Index = () => {
                   <Icon name="Edit" size={18} className="mr-2" />
                   Редактировать права доступа
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Icon name="KeyRound" size={18} className="mr-2" />
-                  Сбросить пароль
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Icon name="UserX" size={18} className="mr-2" />
-                  {user.active ? "Деактивировать учетную запись" : "Активировать учетную запись"}
-                </Button>
-                <Button variant="destructive" className="w-full justify-start">
-                  <Icon name="Trash2" size={18} className="mr-2" />
-                  Удалить пользователя
-                </Button>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start">
+                      <Icon name="KeyRound" size={18} className="mr-2" />
+                      Сбросить пароль
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <Icon name="KeyRound" size={20} className="text-primary" />
+                        Сброс пароля
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                      <p className="text-sm text-gray-600">
+                        На номер телефона <span className="font-medium text-gray-900">{user.phone}</span> будет отправлена СМС с новым паролем для пользователя <span className="font-medium text-gray-900">{user.login}</span>.
+                      </p>
+                      <div className="flex gap-2">
+                        <DialogTrigger asChild>
+                          <Button variant="outline" className="flex-1">Отмена</Button>
+                        </DialogTrigger>
+                        <Button className="flex-1" onClick={() => {
+                          toast.success("СМС с новым паролем отправлена");
+                        }}>
+                          Отправить СМС
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start">
+                      <Icon name="UserX" size={18} className="mr-2" />
+                      {user.active ? "Деактивировать учетную запись" : "Активировать учетную запись"}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <Icon name="UserX" size={20} className={user.active ? "text-orange-500" : "text-green-500"} />
+                        {user.active ? "Деактивация пользователя" : "Активация пользователя"}
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                      {user.active ? (
+                        <div className="space-y-3">
+                          <p className="text-sm text-gray-600">
+                            Вы уверены, что хотите деактивировать пользователя <span className="font-medium text-gray-900">{user.login}</span>?
+                          </p>
+                          <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
+                            <p className="text-sm text-orange-800">
+                              <Icon name="AlertCircle" size={16} className="inline mr-1" />
+                              После деактивации пользователь не сможет войти в приложение.
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-600">
+                          Вы уверены, что хотите активировать пользователя <span className="font-medium text-gray-900">{user.login}</span>? Пользователь сможет снова войти в приложение.
+                        </p>
+                      )}
+                      <div className="flex gap-2">
+                        <DialogTrigger asChild>
+                          <Button variant="outline" className="flex-1">Отмена</Button>
+                        </DialogTrigger>
+                        <Button 
+                          variant={user.active ? "default" : "default"}
+                          className="flex-1" 
+                          onClick={() => {
+                            toast.success(user.active ? "Пользователь деактивирован" : "Пользователь активирован");
+                            setScreen("admin");
+                          }}
+                        >
+                          {user.active ? "Деактивировать" : "Активировать"}
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="destructive" className="w-full justify-start">
+                      <Icon name="Trash2" size={18} className="mr-2" />
+                      Удалить пользователя
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <Icon name="Trash2" size={20} className="text-red-500" />
+                        Удаление пользователя
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                      <p className="text-sm text-gray-600">
+                        Вы уверены, что хотите удалить пользователя <span className="font-medium text-gray-900">{user.login}</span>?
+                      </p>
+                      <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+                        <p className="text-sm text-red-800 font-medium mb-2">
+                          <Icon name="AlertTriangle" size={16} className="inline mr-1" />
+                          Это действие нельзя отменить!
+                        </p>
+                        <p className="text-xs text-red-700">
+                          Будут удалены все данные пользователя, включая историю активности, созданные рекламации и отчеты.
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <DialogTrigger asChild>
+                          <Button variant="outline" className="flex-1">Отмена</Button>
+                        </DialogTrigger>
+                        <Button 
+                          variant="destructive" 
+                          className="flex-1" 
+                          onClick={() => {
+                            toast.success("Пользователь удален");
+                            setScreen("admin");
+                          }}
+                        >
+                          Удалить
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </CardContent>
           </Card>
