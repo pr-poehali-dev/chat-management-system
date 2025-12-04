@@ -74,7 +74,9 @@ const Index = () => {
     { id: 4, name: "Мария Петрова", lastMessage: "Отчет готов", time: "11:45", unread: 0, isGroup: false, notificationsEnabled: true },
   ]);
 
-  const folders = ["Все", "Работа", "Личное", "Архив"];
+  const [folders, setFolders] = useState<string[]>(["Все", "Работа", "Личное", "Архив"]);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [isAddingFolder, setIsAddingFolder] = useState(false);
 
   const mockMessages = [
     { id: 1, sender: "Петров С.И.", text: "Добрый день! Проверьте новую партию", time: "14:25", isMine: false },
@@ -166,6 +168,30 @@ const Index = () => {
     ));
     toast.success(`Чат перемещен в папку "${folder}"`);
     setScreen("chat");
+  };
+
+  const addFolder = () => {
+    if (newFolderName.trim() && !folders.includes(newFolderName.trim())) {
+      setFolders([...folders, newFolderName.trim()]);
+      toast.success(`Папка "${newFolderName}" создана`);
+      setNewFolderName("");
+      setIsAddingFolder(false);
+    } else if (folders.includes(newFolderName.trim())) {
+      toast.error("Папка с таким именем уже существует");
+    } else {
+      toast.error("Введите название папки");
+    }
+  };
+
+  const deleteFolder = (folderName: string) => {
+    const defaultFolders = ["Все", "Работа", "Личное", "Архив"];
+    if (defaultFolders.includes(folderName)) {
+      toast.error("Нельзя удалить стандартную папку");
+      return;
+    }
+    setFolders(folders.filter(f => f !== folderName));
+    setChats(chats.map(chat => chat.folder === folderName ? { ...chat, folder: undefined } : chat));
+    toast.success(`Папка "${folderName}" удалена`);
   };
 
   const createChat = () => {
@@ -477,22 +503,71 @@ const Index = () => {
               <p className="text-xs text-gray-500 mb-3">
                 Текущая папка: <span className="font-medium">{currentChat?.folder || "Без папки"}</span>
               </p>
-              <div className="space-y-2">
-                {folders.filter(f => f !== "Все").map((folder) => (
-                  <Button 
-                    key={folder} 
-                    variant={currentChat?.folder === folder ? "default" : "outline"} 
-                    className="w-full justify-start"
-                    onClick={() => selectedChat && moveChatToFolder(selectedChat, folder)}
-                  >
-                    <Icon name="Folder" size={16} className="mr-2" />
-                    {folder}
-                    {currentChat?.folder === folder && (
-                      <Icon name="Check" size={16} className="ml-auto" />
-                    )}
-                  </Button>
-                ))}
-              </div>
+              <ScrollArea className="max-h-64">
+                <div className="space-y-2">
+                  {folders.filter(f => f !== "Все").map((folder) => {
+                    const defaultFolders = ["Работа", "Личное", "Архив"];
+                    const isDefault = defaultFolders.includes(folder);
+                    
+                    return (
+                      <div key={folder} className="flex gap-2">
+                        <Button 
+                          variant={currentChat?.folder === folder ? "default" : "outline"} 
+                          className="flex-1 justify-start"
+                          onClick={() => selectedChat && moveChatToFolder(selectedChat, folder)}
+                        >
+                          <Icon name="Folder" size={16} className="mr-2" />
+                          {folder}
+                          {currentChat?.folder === folder && (
+                            <Icon name="Check" size={16} className="ml-auto" />
+                          )}
+                        </Button>
+                        {!isDefault && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteFolder(folder)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Icon name="Trash2" size={16} />
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+              
+              {isAddingFolder ? (
+                <div className="mt-3 space-y-2">
+                  <Input
+                    placeholder="Название папки"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && addFolder()}
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={addFolder} className="flex-1">
+                      <Icon name="Check" size={16} className="mr-2" />
+                      Создать
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => { setIsAddingFolder(false); setNewFolderName(""); }} className="flex-1">
+                      <Icon name="X" size={16} className="mr-2" />
+                      Отмена
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  className="w-full mt-3"
+                  onClick={() => setIsAddingFolder(true)}
+                >
+                  <Icon name="Plus" size={16} className="mr-2" />
+                  Создать папку
+                </Button>
+              )}
             </CardContent>
           </Card>
         </div>
