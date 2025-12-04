@@ -933,6 +933,8 @@ const Index = () => {
       { id: 2, type: "report", title: "Создал отчет", description: "Изделие А-123", date: "14.11.2024 11:20" },
       { id: 3, type: "message", title: "Отправил сообщение", description: "В чат 'Производственный отдел'", date: "13.11.2024 16:45" },
     ];
+    
+    // Модальные окна для управления пользователем
 
     return (
       <div className="min-h-screen bg-gray-50">
@@ -942,7 +944,7 @@ const Index = () => {
               <Button variant="ghost" size="icon" onClick={() => setScreen("admin")}>
                 <Icon name="ArrowLeft" size={20} />
               </Button>
-              <h1 className="text-xl font-semibold text-gray-900">Профиль пользователя</h1>
+              <h1 className="text-xl font-semibold text-gray-900">Профиль</h1>
             </div>
           </div>
         </div>
